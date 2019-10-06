@@ -18,6 +18,10 @@ dataBeers = paste(dataFolder, "Beers.csv", sep = "/")
 BreweriesData = read.csv(dataBreweries)
 BeersData = read.csv(dataBeers)
 ```
+###Clean the data (listwise deletion of of observations when AVS is NA)
+```{r}
+newdata <- na.omit(mydata)
+```
 
 ## R Markdown
 

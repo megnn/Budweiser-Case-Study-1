@@ -5,40 +5,119 @@ date: "10/5/2019"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, warnings = FALSE, cache=TRUE}
+#Loading Libraries
+library(tidyverse)
+library(ggplot2)
+library(GGally)
+library(dplyr)
+
 knitr::opts_chunk$set(echo = TRUE)
-#Switch to working folder
-dataFolder = "C:/Users/edgar_000/Documents/Edgar_000/OneDrive/SMU/6306 Doing Data Science/Unit 8 and 9_ Case Study 1/Data"
-setwd(dataFolder)
 
 # Read in data
-dataBreweries = paste(dataFolder, "Breweries.csv", sep = "/")
-dataBeers = paste(dataFolder, "Beers.csv", sep = "/")
+BeersData = read_csv("Beers.csv")
+BreweriesData = read_csv("Breweries.csv")
 
-BreweriesData = read.csv(dataBreweries)
-BeersData = read.csv(dataBeers)
+
 ```
+
 ###Clean the data (listwise deletion of of observations when AVS is NA)
 ```{r}
-newdata <- na.omit(mydata)
+#newdata <- na.omit(mydata)
+
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+Below are the first passes at running the analysis for the EDA.  
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+###Analysis Question One
 
-```{r cars}
-summary(cars)
+```{r warnings = FALSE}
+#How Many Breweries in Each State? 
+library(tidyverse)
+#At the moment the file wont knit without reloading tidyverse here
+#Should find a permanent fix for the final rmd presentation.
+BreweriesData %>% group_by(State) %>% summarise(n = n())
+
+
 ```
 
-## Including Plots
+###Analysis Question Two
 
-You can also embed plots, for example:
+```{r warnings = FALSE, cache=TRUE}
+#Merge the Data 
+BeerWithBreweries = merge(BeersData,BreweriesData, by.x = "Brewery_id", by.y = "Brew_ID")
+colnames(BeerWithBreweries)[colnames(BeerWithBreweries)=="Name.x"] <- "Beer_Name"
+colnames(BeerWithBreweries)[colnames(BeerWithBreweries)=="Name.y"] <- "Brewery_Name"
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+###Analysis Question Three
+
+```{r warnings = FALSE}
+#Address the Missing Values in Each Column
+
+lmibu = lm(BeersData$IBU ~BeersData$ABV, data = BeersData)
+BeersData1 = BeersData %>% filter(!is.na(ABV) & is.na(IBU))
+#predict(lmibu, BeersData1[,3])
+
+
+BeersData1$ImputeIBU = BeersData1$IBU 
+
+
+```
+
+###Analysis Question Four
+
+```{r}
+library(ggthemes)
+MedianABV = BeerWithBreweries %>% group_by(State) %>% summarise(MedABV = median(ABV, na.rm = TRUE))
+MedianABV %>% ggplot(aes(x = State, y = MedABV)) + geom_bar(stat = "identity", fill = "light green") +
+  ylab("Median ABV") + ggtitle("Median Beer ABV by State") + theme_clean()
+
+MedianIBU = BeerWithBreweries %>% group_by(State) %>% summarise(MedIBU = median(IBU, na.rm = TRUE))
+MedianIBU %>% ggplot(aes(x = State, y = MedIBU)) + geom_bar(stat = "identity", fill = "light blue")+
+  ylab("Median State IBU") + ggtitle("Median Beer IBU by State") + theme_clean()
+
+
+
+
+```
+
+
+
+###Analysis Question Five
+
+```{r warnings = FALSE}
+#Which state has the maximum ABV beer. 
+ABVMax = which.max(BeerWithBreweries$ABV)
+print(BeerWithBreweries[ABVMax,c(4,8,10)])
+
+#Which state has the most bitter IBU beer? 
+IBUMax = which.max(BeerWithBreweries$IBU)
+print(BeerWithBreweries[IBUMax,c(5,8,10)])
+
+```
+
+###Analysis Question Six
+
+```{r warnings = FALSE, message=FALSE}
+#Summary Statistics and Distribution of the ABV variable
+BeersData %>% ggplot(aes(x = ABV)) + geom_histogram(stat = "count")
+summary(BeersData$ABV)
+
+
+
+```
+
+###Analysis Question Seven
+
+```{r warnings = FALSE}
+#Relationship betwen the bitterness of the beer and its alcoholic content, Scaatter plot and discussing 
+BeersData %>% ggplot(aes(x = ABV, y = IBU, color = as.factor(Ounces))) + geom_point() +
+  ggtitle("Beer IBU by ABV colored by Ounces")
+
+
+```

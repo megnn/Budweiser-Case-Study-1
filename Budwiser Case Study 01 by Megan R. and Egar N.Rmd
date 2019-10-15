@@ -64,7 +64,31 @@ BeersData1 = BeersData %>% filter(!is.na(ABV) & is.na(IBU))
 #predict(lmibu, BeersData1[,3])
 
 
-BeersData1$ImputeIBU = BeersData1$IBU 
+#BeersData1$ImputeIBU = BeersData1$IBU 
+
+#Address the Missing Values in Each Column
+
+lmibu = lm(BeersData$IBU ~BeersData$ABV + BeersData$Brewery_id, data = BeersData)
+BeersData2 = BeersData
+BeersData1 = BeersData %>% filter(!is.na(ABV) & is.na(IBU))
+BeersData2$IBU = predict(lmibu,BeersData[,4])
+
+summary(lmibu)
+BeersData3 <- sqldf("SELECT Name, Beer_ID, ABV, IFNULL(IBU, 0) as IBU, Brewery_id, Style, Ounces FROM BeersData")
+
+BeersData4 <- sqldf("UPDATE BeersData3
+SET IBU = BeersData2.IBU
+FROM BeersData2
+WHERE BeersData3.IBU = 0 and BeersData3.Beer_ID = BeersData2.Beer_ID")
+
+sqldf("select BeersData3.Name, BeersData3.Beer_ID, BeersData3.ABV, BeersData3.IBU, BeersData3.Brewery_id, BeersData3.Style, BeersData3.Ounces, BeersData2.IBU
+from BeersData3 INNER JOIN BeersData2 BeersData2 INNER JOIN BeersData2 on BeersData3.IBU = 0 and BeersData3.Beer_ID = BeersData2.Beer_ID")
+
+BeersData3 <- sqldf("SELECT * FROM BeersData WHERE BeersData.ABV != 'NA' and BeersData.IBU != 'NA'")
+
+BeersData2 = merge(BeersData1,predictedIBU, by.x = "Beer_ID", all.y = "Beer_ID")
+
+DF1$Activity <- ifelse(DF2$NAME == DF1$NAME, DF2$Activity, NA)
 
 
 ```

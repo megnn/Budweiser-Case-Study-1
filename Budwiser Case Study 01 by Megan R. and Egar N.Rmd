@@ -149,19 +149,24 @@ states$Name = as.character(states$Name)
 states$Abb = as.character(states$Abb)
 states = states[order(states$Name),]
 
-consumptionData = consumptionData %>% mutate(StateAbb = stateTranslate[which(stateTranslate$state.name == State ),1])
+#consumptionData = consumptionData %>% mutate(StateAbb = stateTranslate[which(stateTranslate$state.name == State ),1])
 consumptionData$StateAbb = states$Abb
+consumptionData = consumptionData %>% order_by("StateAbb")
 
 #each beer has combined data.... 
 combinedBeers = merge(BeerWithBreweries, consumptionData, by.x = "State", by.y = "StateAbb")
 
 overall = combinedBeers %>% group_by(State) %>% summarise(Count = n())
-overall$PerCap = NA
-for(i in overall$State){
-  consumeIndex = which(consumptionData$State == i)
-  overall$PerCap[i] = consumptionData[consumeIndex,4]
-}
 
+consumptionData = consumptionData[order("StateAbb"),4]
+
+#Count of Beers per State
+CountofBeers = BeerWithBreweries %>% group_by(State) %>% summarise(Count = n())
+CountofBeers %>% ggplot(aes(x = State, y = Count)) + geom_bar(stat = "identity", fill = "light blue")+
+  ylab("Count of Beers") + ggtitle("Number of Beers Produced by State") + theme_clean()
+
+#Graph of Consumption Rates by STate
+consumptionData%>% ggplot(aes(x = StateAbb, y = consumptionData$`Per capita `)) + geom_bar(stat = "identity", fill = "light green") + ylab("Per Capita Consumption of Beer in 1000s of Gallons") + ggtitle("Consumption of Beer Per Capita By State") + theme_clean()
 
 
 

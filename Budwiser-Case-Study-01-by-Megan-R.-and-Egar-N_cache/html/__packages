@@ -10,3 +10,7 @@ stringr
 forcats
 GGally
 plyr
+proto
+gsubfn
+RSQLite
+sqldf

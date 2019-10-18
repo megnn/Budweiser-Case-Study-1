@@ -11,24 +11,17 @@ library(tidyverse)
 library(ggplot2)
 library(GGally)
 library(dplyr)
-
+library(sqldf)
 knitr::opts_chunk$set(echo = TRUE)
 
-# Read in data
+# Read in data from Local Files
 BeersData = read_csv("Beers.csv")
 BreweriesData = read_csv("Breweries.csv")
 
 
-```
-
-###Clean the data (listwise deletion of of observations when AVS is NA)
-```{r}
-#newdata <- na.omit(mydata)
 
 ```
 
-
-Below are the first passes at running the analysis for the EDA.  
 
 ###Analysis Question One
 
@@ -37,7 +30,38 @@ Below are the first passes at running the analysis for the EDA.
 library(tidyverse)
 #At the moment the file wont knit without reloading tidyverse here
 #Should find a permanent fix for the final rmd presentation.
-BreweriesData %>% group_by(State) %>% summarise(n = n())
+StatesCount = BreweriesData %>% group_by(State) %>% summarise(n = n())
+
+StatesCountGraph = BreweriesData %>% group_by(State) %>% summarise(n = n()) %>% ggplot(aes(x = State, y = n)) + geom_bar(stat="identity")
+
+
+```
+
+
+###Analysis Question Three
+The Missing Values are addressed before any additional data manipulation takes place so work does not have to be redone.
+
+```{r warnings = FALSE}
+#Address the Missing Values in Each Column
+#Copy Made to compare differences after Imputation
+BeersCopy = BeersData
+
+#Replace the NAs with the respective Medians
+MedianIBU <- median(BeersData$IBU, na.rm = TRUE)
+MedianABV <- median(BeersData$ABV, na.rm = TRUE) 
+
+#Replace IBU
+NAIndicesIBU = which(is.na(BeersData$IBU))
+for(i in NAIndicesIBU){
+  BeersData$IBU[i] = MedianIBU
+}
+
+#ReplaceABV
+NAIndicesABV = which(is.na(BeersData$ABV))
+for(i in NAIndicesABV){
+  BeersData$ABV[i] = MedianABV
+}
+
 
 
 ```
@@ -50,59 +74,19 @@ BeerWithBreweries = merge(BeersData,BreweriesData, by.x = "Brewery_id", by.y = "
 colnames(BeerWithBreweries)[colnames(BeerWithBreweries)=="Name.x"] <- "Beer_Name"
 colnames(BeerWithBreweries)[colnames(BeerWithBreweries)=="Name.y"] <- "Brewery_Name"
 
-
 ```
 
-
-###Analysis Question Three
-
-```{r warnings = FALSE}
-#Address the Missing Values in Each Column
-
-lmibu = lm(BeersData$IBU ~BeersData$ABV, data = BeersData)
-BeersData1 = BeersData %>% filter(!is.na(ABV) & is.na(IBU))
-#predict(lmibu, BeersData1[,3])
-
-
-#BeersData1$ImputeIBU = BeersData1$IBU 
-
-#Address the Missing Values in Each Column
-
-lmibu = lm(BeersData$IBU ~BeersData$ABV + BeersData$Brewery_id, data = BeersData)
-BeersData2 = BeersData
-BeersData1 = BeersData %>% filter(!is.na(ABV) & is.na(IBU))
-BeersData2$IBU = predict(lmibu,BeersData[,4])
-
-summary(lmibu)
-BeersData3 <- sqldf("SELECT Name, Beer_ID, ABV, IFNULL(IBU, 0) as IBU, Brewery_id, Style, Ounces FROM BeersData")
-
-BeersData4 <- sqldf("UPDATE BeersData3
-SET IBU = BeersData2.IBU
-FROM BeersData2
-WHERE BeersData3.IBU = 0 and BeersData3.Beer_ID = BeersData2.Beer_ID")
-
-sqldf("select BeersData3.Name, BeersData3.Beer_ID, BeersData3.ABV, BeersData3.IBU, BeersData3.Brewery_id, BeersData3.Style, BeersData3.Ounces, BeersData2.IBU
-from BeersData3 INNER JOIN BeersData2 BeersData2 INNER JOIN BeersData2 on BeersData3.IBU = 0 and BeersData3.Beer_ID = BeersData2.Beer_ID")
-
-BeersData3 <- sqldf("SELECT * FROM BeersData WHERE BeersData.ABV != 'NA' and BeersData.IBU != 'NA'")
-
-BeersData2 = merge(BeersData1,predictedIBU, by.x = "Beer_ID", all.y = "Beer_ID")
-
-DF1$Activity <- ifelse(DF2$NAME == DF1$NAME, DF2$Activity, NA)
-
-
-```
 
 ###Analysis Question Four
 
 ```{r}
 library(ggthemes)
-MedianABV = BeerWithBreweries %>% group_by(State) %>% summarise(MedABV = median(ABV, na.rm = TRUE))
-MedianABV %>% ggplot(aes(x = State, y = MedABV)) + geom_bar(stat = "identity", fill = "light green") +
+MedianABVState = BeerWithBreweries %>% group_by(State) %>% summarise(MedABV = median(ABV, na.rm = TRUE))
+MedianABVState %>% ggplot(aes(x = State, y = MedABV)) + geom_bar(stat = "identity", fill = "light green") +
   ylab("Median ABV") + ggtitle("Median Beer ABV by State") + theme_clean()
 
-MedianIBU = BeerWithBreweries %>% group_by(State) %>% summarise(MedIBU = median(IBU, na.rm = TRUE))
-MedianIBU %>% ggplot(aes(x = State, y = MedIBU)) + geom_bar(stat = "identity", fill = "light blue")+
+MedianIBUState = BeerWithBreweries %>% group_by(State) %>% summarise(MedIBU = median(IBU, na.rm = TRUE))
+MedianIBUState %>% ggplot(aes(x = State, y = MedIBU)) + geom_bar(stat = "identity", fill = "light blue")+
   ylab("Median State IBU") + ggtitle("Median Beer IBU by State") + theme_clean()
 
 
@@ -117,11 +101,11 @@ MedianIBU %>% ggplot(aes(x = State, y = MedIBU)) + geom_bar(stat = "identity", f
 ```{r warnings = FALSE}
 #Which state has the maximum ABV beer. 
 ABVMax = which.max(BeerWithBreweries$ABV)
-print(BeerWithBreweries[ABVMax,c(4,8,10)])
+print(BeerWithBreweries[ABVMax,c(2,4,8,10)])
 
 #Which state has the most bitter IBU beer? 
 IBUMax = which.max(BeerWithBreweries$IBU)
-print(BeerWithBreweries[IBUMax,c(5,8,10)])
+print(BeerWithBreweries[IBUMax,c(2,5,8,10)])
 
 ```
 
@@ -129,7 +113,8 @@ print(BeerWithBreweries[IBUMax,c(5,8,10)])
 
 ```{r warnings = FALSE, message=FALSE}
 #Summary Statistics and Distribution of the ABV variable
-BeersData %>% ggplot(aes(x = ABV)) + geom_histogram(stat = "count")
+BeersData %>% ggplot(aes(x = ABV)) + geom_histogram(stat = "count", fill = "brown") +
+  theme_clean() + ggtitle("Distribution of ABV in Beers") + ylab("Frequency of Beers by ABV")
 summary(BeersData$ABV)
 
 
@@ -140,8 +125,45 @@ summary(BeersData$ABV)
 
 ```{r warnings = FALSE}
 #Relationship betwen the bitterness of the beer and its alcoholic content, Scaatter plot and discussing 
-BeersData %>% ggplot(aes(x = ABV, y = IBU, color = as.factor(Ounces))) + geom_point() +
+#Imputed
+BeersData %>% ggplot(aes(x = ABV, y = IBU)) + geom_point(color = "light blue") +
+  ggtitle("Beer IBU by ABV colored by Ounces")
+
+#Original Values
+
+BeersCopy %>% ggplot(aes(x = ABV, y = IBU)) + geom_point(color = "light green") +
   ggtitle("Beer IBU by ABV colored by Ounces")
 
 
 ```
+
+
+```{r warnings = FALSE}
+#Knocking off some socks
+consumptionData = read_csv("BeerConsumptionData.csv")
+stateTranslate = data.frame(Abb = state.abb,Name = state.name)
+#Missing DC
+DC = data.frame(Abb = "DC", Name = "Dist.of Columbia")
+states = rbind(stateTranslate, DC)
+states$Name = as.character(states$Name)
+states$Abb = as.character(states$Abb)
+states = states[order(states$Name),]
+
+consumptionData = consumptionData %>% mutate(StateAbb = stateTranslate[which(stateTranslate$state.name == State ),1])
+consumptionData$StateAbb = states$Abb
+
+#each beer has combined data.... 
+combinedBeers = merge(BeerWithBreweries, consumptionData, by.x = "State", by.y = "StateAbb")
+
+overall = combinedBeers %>% group_by(State) %>% summarise(Count = n())
+overall$PerCap = NA
+for(i in overall$State){
+  consumeIndex = which(consumptionData$State == i)
+  overall$PerCap[i] = consumptionData[consumeIndex,4]
+}
+
+
+
+
+```
+

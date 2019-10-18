@@ -62,6 +62,22 @@ for(i in NAIndicesABV){
   BeersData$ABV[i] = MedianABV
 }
 
+#Example of replacing values with regression model
+
+BeersTemp = BeersCopy
+#this is an unimputed data set
+lmibu = lm(BeersTemp$IBU ~BeersTemp$ABV, data = BeersTemp)
+predicted = predict(lmibu, BeersTemp)
+
+NaTempIndices = which(is.na(BeersTemp$IBU))
+for(i in NaTempIndices){
+  BeersTemp$IBU[i] = predicted[i]
+}
+
+
+
+
+
 
 
 ```

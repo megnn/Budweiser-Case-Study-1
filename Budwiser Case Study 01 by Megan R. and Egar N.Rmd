@@ -1,17 +1,19 @@
 ---
-title: "Budwiser Case Study 01 by Megan R. and Egar N."
+title: "Budwiser Case Study 01 by Megan R. and Edgar N."
 author: "Edgar Nunez and Megan Riley"
 date: "10/5/2019"
 output: html_document
 ---
 
-```{r setup, warnings = FALSE, cache=TRUE}
+```{r setup, warnings = FALSE}
 #Loading Libraries
+library(stringr)
 library(tidyverse)
 library(ggplot2)
 library(GGally)
 library(dplyr)
 library(sqldf)
+library(ggthemes)
 knitr::opts_chunk$set(echo = TRUE)
 
 # Read in data from Local Files
@@ -46,7 +48,25 @@ The Missing Values are addressed before any additional data manipulation takes p
 #Copy Made to compare differences after Imputation
 BeersCopy = BeersData
 
-#Replace the NAs with the respective Medians
+#First the Exploration Graphs and Residuals of a Linear Model of 
+ggplot(BeersData, aes(x = ABV, y = IBU)) +
+  geom_point () +
+  geom_smooth (method='lm') +
+  labs (
+    title = "ABV and IBU relationship",
+    subtitle = "Strong Positive Correlation - Needs Transformation",
+    x = "ABV",
+    y = "IBU")
+
+#Linear Model
+lmibu = lm(BeersData$IBU ~BeersData$ABV, data = BeersData)
+#Demonstrate the Residuals
+plot(resid(lmibu), main = "Residuals of a Linear Model of IBU based on ABV", ylab = "Residuals")
+
+
+#Given the results we move forward with imputing NAs with Median values
+
+#Determine Medians
 MedianIBU <- median(BeersData$IBU, na.rm = TRUE)
 MedianABV <- median(BeersData$ABV, na.rm = TRUE) 
 
@@ -63,6 +83,7 @@ for(i in NAIndicesABV){
 }
 
 #Example of replacing values with regression model
+#REMOVE FOR FINAL
 
 BeersTemp = BeersCopy
 #this is an unimputed data set
@@ -133,6 +154,10 @@ BeersData %>% ggplot(aes(x = ABV)) + geom_histogram(stat = "count", fill = "brow
   theme_clean() + ggtitle("Distribution of ABV in Beers") + ylab("Frequency of Beers by ABV")
 summary(BeersData$ABV)
 
+BeersData %>% ggplot(aes(y = ABV)) + geom_boxplot( fill = "brown") +
+  theme_clean() + ggtitle("Boxplot of ABV in Beers") 
+
+
 
 
 ```
@@ -141,6 +166,7 @@ summary(BeersData$ABV)
 
 ```{r warnings = FALSE}
 #Relationship betwen the bitterness of the beer and its alcoholic content, Scaatter plot and discussing 
+
 #Imputed
 BeersData %>% ggplot(aes(x = ABV, y = IBU)) + geom_point(color = "light blue") +
   ggtitle("Beer IBU by ABV colored by Ounces")
@@ -149,6 +175,66 @@ BeersData %>% ggplot(aes(x = ABV, y = IBU)) + geom_point(color = "light blue") +
 
 BeersCopy %>% ggplot(aes(x = ABV, y = IBU)) + geom_point(color = "light green") +
   ggtitle("Beer IBU by ABV colored by Ounces")
+
+
+```
+
+Question Eight
+```{r warnings = FALSE}
+
+table(BeersData$Style)
+BeersData %>% select(Name, Beer_ID, ABV, IBU, Brewery_id, Style, Ounces) %>% 
+filter(str_detect(Style, "India Pale Ale"))
+BeersData %>% select(Name, Beer_ID, ABV, IBU, Brewery_id, Style, Ounces) %>% 
+filter(str_detect(Style, "IPA"))
+BeersData %>% select(Name, Beer_ID, ABV, IBU, Brewery_id, Style, Ounces) %>% 
+dplyr::filter(!str_detect(Style, "IPA"))
+set.seed(9850)
+gp <- runif(nrow(BeersData))
+head(BeersData)
+BeersData <- BeersData[order(gp),] #Scramble the beers n the data set
+#Remove rows with where Style is NA
+BeersData1 <- BeersData[!is.na(BeersData$Style),]
+#Convert the Style column to a factor, necessary for KNN
+BeersData1$Style <- as.factor(BeersData1$Style)
+str(BeersData1)
+summary(BeersData1[, c(1, 2, 3, 4, 5)])
+#Normalize numeric features (variable) to have similar scale
+normalize <- function(x) (x - min(x))/(max(x)-min(x))
+normalize(BeersData1[, 2:5])
+BeersData_norm <- as.data.frame(lapply(BeersData1[,c(2,3,4,5)], normalize))
+BeersData_norm$Style <- BeersData1$Style
+str(BeersData_norm)
+summary(BeersData_norm)
+#Create training and test data sets with 70:30 split
+#Training data set uses rows 1 - 1687 from the normalized dataset and all the columns for the train dataset
+ #Test data set Uses rows 1688 - 2410 from the normalized dataset and all the columns for the test dtaset
+BeersData_train <- data.frame(BeersData_norm[1:1687, 1:4])
+BeersData_test <- data.frame(BeersData_norm[1688:2410, 1:4])     
+  
+BeersData_train <- filter(BeersData_train, !is.na(BeersData_train$IBU))
+BeersData_test <- filter(BeersData_test, !is.na(BeersData_test$IBU))
+#str(BeersData_train)
+#BeersData_train[!is.na(BeersData_train$IBU),]
+#Target feature (Style) training data set uses rows 1 - 1687 and column 6 from theoriginal dataset
+#Target feature (Style) testing data set uses rows 1688 - 2410 and column 6 from the original dataset
+BeersData_train_target <- BeersData1[1:1687,6]
+BeersData_test_target <- BeersData1[1688:2410, 6]
+BeersData_train_target <- filter(BeersData_train_target, !is.na(BeersData_train_target$Style))
+BeersData_test_target <- filter(BeersData_test_target, !is.na(BeersData_test_target$Style))
+#Load the class package
+require(class)
+#The knn algorithm receives the training, testing and training target data frmes. In addition to the k - a plce holder for how many neighbors we want the algorithm to use
+# A rule of thum is to set k = to the sqrt(total number of obs.) and preferably use an odd number to help knn break a potential tie
+sqrt(2410)
+# Generate a prediction from the classification of all the values in the test dataframe
+m1 <- knn(train = BeersData_train, test = BeersData_test, cl=BeersData_train_target, k=50)
+#Use a confusion matrix to evaluate how well knn did at classifying those 21 flowers in the test data set
+#Use the target test data set in the X axis, and put m1 in the Y axis
+table(BeersData_test_target, m1) 
+#Values in the diagonal of the confusion matrix are the correctly predicted, off the diagonal are values incorrectly predicted
+# Target variables that categorical must be coded as factor in R for the KNN algorithm to be sucessful
+m1
 
 
 ```
@@ -182,7 +268,7 @@ CountofBeers %>% ggplot(aes(x = State, y = Count)) + geom_bar(stat = "identity",
   ylab("Count of Beers") + ggtitle("Number of Beers Produced by State") + theme_clean()
 
 #Graph of Consumption Rates by STate
-consumptionData%>% ggplot(aes(x = StateAbb, y = consumptionData$`Per capita `)) + geom_bar(stat = "identity", fill = "light green") + ylab("Per Capita Consumption of Beer in 1000s of Gallons") + ggtitle("Consumption of Beer Per Capita By State") + theme_clean()
+consumptionData %>% ggplot(aes(x = StateAbb, y = consumptionData$`Per capita `)) + geom_bar(stat = "identity", fill = "light green") + ylab("Per Capita Consumption of Beer in 1000s of Gallons") + ggtitle("Consumption of Beer Per Capita By State") + theme_clean()
 
 
 

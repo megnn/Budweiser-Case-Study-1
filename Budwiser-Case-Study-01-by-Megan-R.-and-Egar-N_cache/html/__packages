@@ -14,3 +14,7 @@ proto
 gsubfn
 RSQLite
 sqldf
+ggthemes
+class
+lattice
+caret

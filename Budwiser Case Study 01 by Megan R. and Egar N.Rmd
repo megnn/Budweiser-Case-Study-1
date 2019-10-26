@@ -1,9 +1,13 @@
 ---
 title: "Budwiser Case Study"
 author: "Edgar Nunez and Megan Riley"
-date: "10/5/2019"
 output: html_document
 ---
+
+In the document below we explore the given Beer and Brewery data. This includes some analysis of summary statistics followed by a look into the relationship between IBU and ABV and finally some additional exploratory data analysis with an additional data set. 
+
+
+First you can see the data we load along with the libraries used in this analysis. 
 
 ```{r setup, warnings = FALSE, message= FALSE}
 #Loading Libraries
@@ -12,10 +16,11 @@ library(tidyverse)
 library(ggplot2)
 library(GGally)
 library(dplyr)
-library(sqldf)
 library(ggthemes)
 library(class)
 library(caret)
+library(usmap)
+
 
 # Read in data from Local Files
 BeersData = read_csv("Beers.csv")
@@ -26,7 +31,10 @@ BreweriesData = read_csv("Breweries.csv")
 ```
 
 
-###Analysis Question One
+##Key Question One
+###How many breweries are present in each state?
+
+Below you will see the histogram demonstrating how many breweries can be found in each state. You may see a few top states such as Colorado and California, but several other states have a decent presence of breweries. 
 
 ```{r warnings = FALSE}
 #How Many Breweries in Each State? 
@@ -35,38 +43,77 @@ library(tidyverse)
 #Should find a permanent fix for the final rmd presentation.
 StatesCount = BreweriesData %>% group_by(State) %>% summarise(n = n())
 
-StatesCountGraph = BreweriesData %>% group_by(State) %>% summarise(n = n()) %>% ggplot(aes(x = State, y = n)) + geom_bar(stat="identity")
+StatesCount %>% ggplot(aes(x = State, y = n)) + geom_bar(stat="identity") + ggtitle("Number of Breweries per State") + ylab("Count of Breweries")
 
-StatesCountGraph
 
 ```
 
 
-###Analysis Question Three
-The Missing Values are addressed before any additional data manipulation takes place so work does not have to be redone.
+##Key Question Two
+###Merge the Beer and Breweries data
+
+Next in order to view the entire picture we merge the Beer data with the Brewery data and clean the variable names so they are later easily referenced. 
+
+The first six and last six entries of the merged data set are also printed below. 
+
+```{r warnings = FALSE, cache=TRUE}
+#Merge the Data 
+BeerWithBreweries = merge(BeersData,BreweriesData, by.x = "Brewery_id", by.y = "Brew_ID")
+colnames(BeerWithBreweries)[colnames(BeerWithBreweries)=="Name.x"] <- "Beer_Name"
+colnames(BeerWithBreweries)[colnames(BeerWithBreweries)=="Name.y"] <- "Brewery_Name"
+
+head(BeerWithBreweries, n = 6)
+tail(BeerWithBreweries, n = 6)
+
+```
+
+##Key Question Three
+###Address the Missing Values in each Column
+
+Next we will address the missing values. First a copy of the data is made so that we can compare the data before and after imputation. 
+
+After initial investigations we know ABV seems to have 
 
 ```{r warnings = FALSE}
 #Address the Missing Values in Each Column
+
 #Copy Made to compare differences after Imputation
 BeersCopy = BeersData
 
-#First the Exploration Graphs and Residuals of a Linear Model of 
-ggplot(BeersData, aes(x = ABV, y = IBU)) +
+#First the Exploration Graphs and Residuals of a Linear Model
+ggplot(BeersCopy, aes(x = ABV, y = IBU)) +
   geom_point () +
   geom_smooth (method='lm') +
   labs (
     title = "ABV and IBU relationship",
-    subtitle = "Strong Positive Correlation - Needs Transformation",
+    subtitle = "Strong Positive Correlation",
     x = "ABV",
     y = "IBU")
+```
+
+
+
+```{r warnings = FALSE}
 
 #Linear Model
 lmibu = lm(BeersData$IBU ~BeersData$ABV, data = BeersData)
+
 #Demonstrate the Residuals
 plot(resid(lmibu), main = "Residuals of a Linear Model of IBU based on ABV", ylab = "Residuals")
 
+#Correlation Test to determine how good a linear model fit is. 
+cor.test(BeersData$ABV,BeersData$IBU, method = "pearson")
 
-#Given the results we move forward with imputing NAs with Median values
+
+#Given the above we will move forward with a linear model. 
+predicted = predict(lmibu, BeersData[,4])
+
+NaTempIndices = which(is.na(BeersData$IBU))
+for(i in NaTempIndices){
+  BeersData$IBU[i] = predicted[i]
+}
+
+#For the final 62 Missing Values we can impute the median to not lose the values. 
 
 #Determine Medians
 MedianIBU <- median(BeersData$IBU, na.rm = TRUE)
@@ -85,28 +132,25 @@ for(i in NAIndicesABV){
 }
 
 
+#We can now see how the distribution changes here. 
+BeersCopy %>% ggplot(aes(x = IBU)) + geom_density()
+BeersData %>% ggplot(aes(x = IBU)) + geom_density()
+
+#Note that the new data density has a peak above the original data spread and we should remember going forward that the IBU data is artificially inflated 
 
 
-
-
-
-```
-
-###Analysis Question Two
-
-```{r warnings = FALSE, cache=TRUE}
-#Merge the Data 
+#In order to ensure our combined data is correct we are re-merging it here
 BeerWithBreweries = merge(BeersData,BreweriesData, by.x = "Brewery_id", by.y = "Brew_ID")
 colnames(BeerWithBreweries)[colnames(BeerWithBreweries)=="Name.x"] <- "Beer_Name"
 colnames(BeerWithBreweries)[colnames(BeerWithBreweries)=="Name.y"] <- "Brewery_Name"
 
-head(BeerWithBreweries, n = 6)
-tail(BeerWithBreweries, n = 6)
 
 ```
 
 
-###Analysis Question Four
+
+##Key Question Four
+###Compute the median alcohol content and international bitterness for each state
 
 ```{r}
 library(ggthemes)
@@ -121,7 +165,7 @@ MedianIBUState = BeerWithBreweries %>% group_by(State) %>% summarise(MedIBU = me
 MedianIBUState %>% ggplot(aes(x = State, y = MedIBU)) + geom_bar(stat = "identity", fill = "light blue")+
   ylab("Median State IBU") + ggtitle("Median Beer IBU by State") + theme_clean()
 
-#Given we imputed the Median into 1005 NAs in IBU here is the original data for comparison
+#Given we imputed a predicted value into 1005 NAs in IBU here is the original data for comparison
 OrigCombined = merge(BeersCopy,BreweriesData, by.x = "Brewery_id", by.y = "Brew_ID")
 colnames(OrigCombined)[colnames(OrigCombined)=="Name.x"] <- "Beer_Name"
 colnames(OrigCombined)[colnames(OrigCombined)=="Name.y"] <- "Brewery_Name"
@@ -138,7 +182,9 @@ OrigMedianIBUState %>% ggplot(aes(x = State, y = MedIBU)) + geom_bar(stat = "ide
 
 
 
-###Analysis Question Five
+##Key Question Five
+###Which state has the maximum alcoholic beer? 
+###Which state has the most bitter beer? 
 
 ```{r warnings = FALSE}
 #Which state has the maximum ABV beer. 
@@ -151,7 +197,8 @@ print(BeerWithBreweries[IBUMax,c(2,5,8,10)])
 
 ```
 
-###Analysis Question Six
+##Key Question Six
+###Comment on the summary statistics and distributions of the ABV variable. 
 
 ```{r warnings = FALSE, message=FALSE}
 #Summary Statistics and Distribution of the ABV variable
@@ -167,24 +214,26 @@ BeersData %>% ggplot(aes(y = ABV)) + geom_boxplot( fill = "brown") +
 
 ```
 
-###Analysis Question Seven
+###Key Question Seven
+##Is there an apparent relationship between the bitterness of beer and its alcholic content? 
 
 ```{r warnings = FALSE}
 #Relationship betwen the bitterness of the beer and its alcoholic content, Scaatter plot and discussing 
 
 #Imputed
-BeersData %>% ggplot(aes(x = ABV, y = IBU)) + geom_point(color = "light blue") +
-  ggtitle("Beer IBU by ABV")
+BeersData %>% ggplot(aes(x = ABV, y = IBU)) + geom_point(color = "light blue") + ggtitle("Beer IBU by ABV")
+
 
 #Original Values
-
 BeersCopy %>% ggplot(aes(x = ABV, y = IBU)) + geom_point(color = "light green") +
   ggtitle("Beer IBU by ABV")
 
 
 ```
 
-Question Eight
+##Key Question Eight
+###Investigate teh difference between IPAs and other types of Ales with respect to IBU and ABV
+
 ```{r warnings = FALSE}
 
 #Data Set of Just IPA and Ale Beers
@@ -201,8 +250,8 @@ AleIPABeers %>% ggplot(aes(x = ABV, y = IBU, color = Ale_Type)) + geom_point() +
 
 
 set.seed(9850)
-#Testing a 70 30 split to train
-TestPercent = .7
+#Testing a 80 30 split to train
+TestPercent = .8
 BeerIndices = sample(1:dim(AleIPABeers)[1], round(TestPercent * dim(AleIPABeers)[1]))
 
 
@@ -230,19 +279,16 @@ confusionMatrix(table(Test_AleIPA$Ale_Type,m1))
 
 ```
 
-Final Section Additional Analysis
-
-White Space
+##Final Exploratory Analysis
+###Determining top producer and consumer states with added beer consumption data. 
 
 ```{r}
-
-
 #Knocking off some socks
+#Loading the Beer Consumption Data
 consumptionData = read.csv("BeerConsumptionData.csv")
 
-
-
 stateTranslate = data.frame(Abb = state.abb,Name = state.name)
+
 #Missing DC
 DC = data.frame(Abb = "DC", Name = "Dist.of Columbia")
 states = rbind(stateTranslate, DC)
@@ -250,26 +296,69 @@ states$Name = as.character(states$Name)
 states$Abb = as.character(states$Abb)
 states = states[order(states$Name),]
 
-#consumptionData = consumptionData %>% mutate(StateAbb = stateTranslate[which(stateTranslate$state.name == State ),1])
 consumptionData$StateAbb = states$Abb
-#consumptionData = consumptionData %>% order_by("StateAbb")
+consumptionData = consumptionData[order(consumptionData$StateAbb),]
+
 
 #each beer has combined data.... ??
 combinedBeers = merge(BeerWithBreweries, consumptionData, by.x = "State", by.y = "StateAbb")
 
 overall = combinedBeers %>% group_by(State) %>% summarise(Count = n())
 
-consumptionData = consumptionData[order("StateAbb"),4]
 
 #Count of Beers per State
 CountofBeers = BeerWithBreweries %>% group_by(State) %>% summarise(Count = n())
-CountofBeers %>% ggplot(aes(x = State, y = Count)) + geom_bar(stat = "identity", fill = "light blue")+
-  ylab("Count of Beers") + ggtitle("Number of Beers Produced by State") + theme_clean()
+CountofBeers$state = CountofBeers$State
 
-#Graph of Consumption Rates by STate
-#consumptionData %>% ggplot(aes(x = StateAbb, y = consumptionData$`Per capita `)) + geom_bar(stat = "identity", fill = "light green") + ylab("Per Capita Consumption of Beer in 1000s of Gallons") + ggtitle("Consumption of Beer Per Capita By State") + theme_clean()
+plot_usmap(data = CountofBeers, values = "Count", color = "white") + 
+  scale_fill_continuous(name = "Unique Beers Produced", low = "#bdffe6", high = "#0f4d36") + 
+  theme(legend.position = "right") + ggtitle("Number of Unique Beers Produced by State")
 
 
+
+
+#Mean ABV
+ABVMean = BeerWithBreweries %>% group_by(State) %>% summarize(Mean = mean(ABV))
+ABVMean$state = ABVMean$State
+
+plot_usmap(data = ABVMean, values = "Mean", color = "white") + 
+  scale_fill_continuous(name = "Mean ABV", low = "#bdffe6", high = "#0f4d36") + 
+  theme(legend.position = "right") + ggtitle("Mean Alcoholic Beverage Value by State")
+
+
+
+#Consumption by State
+usmapConsumption = data.frame(state = consumptionData$StateAbb, full = consumptionData$State, perCap = consumptionData$PerCapita.)
+
+
+plot_usmap(data = usmapConsumption, values = "perCap", color= "white") + 
+  scale_fill_continuous(name = "Per Capita Consumption", low = "#d7e2fa" , high = "#122654") + 
+  theme(legend.position = "right") + ggtitle("Consumption of Beer in Thousands of Gallons Per Capita by State")
+
+#ConsumptionEthanol 
+#Estimate because we dont know these beers are an exhaustive list
+usmapConsumption$meanABV = ABVMean$Mean 
+usmapConsumption = usmapConsumption %>% mutate(TotalEthanolConsumption = (meanABV * perCap)*1000)
+
+plot_usmap(data = usmapConsumption, values = "TotalEthanolConsumption", color= "white") + 
+  scale_fill_continuous(name = "Per CapitaConsumption", low = "#d7e2fa" , high = "#122654") + 
+  theme(legend.position = "right") + ggtitle("Average Consumption of Alcohol through Beer in Gallons Per Capita by State")
+
+
+
+#Compare Production with Consumption 
+ComparedData = data.frame(usmapConsumption, UniqueBeers = CountofBeers$Count)
+ComparedData = ComparedData %>% mutate(Producers= UniqueBeers / perCap)
+
+#Producers and Consumer States  
+#Light green are states with best opportunities for introducing new beers 
+#Darker states are states to focus on changing consumption rates. 
+plot_usmap(data = ComparedData, values = "Producers", color= "white") + 
+  scale_fill_continuous(name = "Unique Beers by Consumption", low = "#d1ffe7" , high = "#2d4036") + 
+  theme(legend.position = "right") + ggtitle("Number of Unique Beers Prodcued by Per Capita Consumption by State")
 
 ```
+
+
+##Conclusion
 

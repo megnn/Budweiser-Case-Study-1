@@ -1,4 +1,4 @@
-﻿State,Volume ,Ethanol ,Per capita 
+﻿State,Volume ,Ethanol ,PerCapita 
 Alabama,"97,712 ","4,397 ",1.09 
 Alaska,"15,146 ",682 ,1.15 
 Arizona,"143,313 ","6,449 ",1.14 
@@ -20,7 +20,7 @@ Kentucky,"78,371 ","3,527 ",0.96 
 Louisiana,"106,082 ","4,774 ",1.25 
 Maine,"34,441 ","1,550 ",1.36 
 Maryland,"91,886 ","4,135 ",0.83 
-Massachusetts ,"121,900 ","5,485 ",0.95 
+Massachusetts,"121,900 ","5,485 ",0.95 
 Michigan,"190,291 ","8,563 ",1.04 
 Minnesota,"115,643 ","5,204 ",1.15 
 Mississippi,"69,347 ","3,121 ",1.28 
@@ -30,14 +30,14 @@ Nebraska,"44,361 ","1,996 ",1.30 
 Nevada,"75,640 ","3,404 ",1.41 
 New Hampshire,"47,430 ","2,134 ",1.87 
 New Jersey,"135,941 ","6,117 ",0.82 
-New Mexic,"41,979 ","1,889 ",1.11 
+New Mexico,"41,979 ","1,889 ",1.11 
 New York,"332,576 ","14,966 ",0.91 
 North Carolina,"196,313 ","8,834 ",1.05 
 North Dakota,"22,384 ","1,007 ",1.64 
 Ohio,"245,520 ","11,048 ",1.15 
 Oklahoma,"74,307 ","3,344 ",1.05 
 Oregon,"94,124 ","4,236 ",1.24 
-Pennsylvania... ,"312,418 ","14,059 ",1.31 
+Pennsylvania,"312,418 ","14,059 ",1.31 
 Rhode Island,"18,700 ",842 ,0.94 
 South Carolina,"107,477 ","4,836 ",1.18 
 South Dakota,"22,537 ","1,014 ",1.46 

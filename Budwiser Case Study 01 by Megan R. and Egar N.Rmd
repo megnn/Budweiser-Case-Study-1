@@ -39,8 +39,6 @@ Below you will see the histogram demonstrating how many breweries can be found i
 ```{r warnings = FALSE}
 #How Many Breweries in Each State? 
 library(tidyverse)
-#At the moment the file wont knit without reloading tidyverse here
-#Should find a permanent fix for the final rmd presentation.
 StatesCount = BreweriesData %>% group_by(State) %>% summarise(n = n())
 
 StatesCount %>% ggplot(aes(x = State, y = n)) + geom_bar(stat="identity") + ggtitle("Number of Breweries per State") + ylab("Count of Breweries")
@@ -165,7 +163,7 @@ colnames(BeerWithBreweries)[colnames(BeerWithBreweries)=="Name.y"] <- "Brewery_N
 
 Next using our complete data we will view the median alcohol content and international bitterness for each state. 
 
-The combined data is summarsied by both the median for IBU and median for ABV and then visualized below. ABV is quite uniform with most states having a similar median ABV. Utah is the exception with a much lower ABV than average. This makes some sense given the large population in Utah of Mormons who do not drink alcohol. 
+The combined data is summarzied by both the median for IBU and median for ABV and then visualized below. ABV is quite uniform with most states having a similar median ABV. Utah is the exception with a much lower ABV than average. This makes some sense given the large population in Utah of Mormons who do not drink alcohol. 
 
 ```{r}
 library(ggthemes)
@@ -406,9 +404,9 @@ plot_usmap(data = usmapConsumption, values = "TotalEthanolConsumption", color= "
 
 Finally we can address the gap between states who produce many types of beer and those who consume more. Quantifying this gap gives us a chance to build a list of states that can be targeted as low producers who may be good targets for more locally produced beers owned by Budweiser larger producing states may offer an opportunity for Budweiser to acquire some locally produced beers to build a larger foothold in the more active beer producing states. 
 
-Below we have a graph of which states produce the most unique beers, again Colorado and California top the list. Following is the visualization comparing the per capita consumption rate of beer in thousands of gallons by the number of unique beers produced by state. The resulting quanity provides us a measure of producing states and consuming states. 
+Below we have a graph of which states produce the most unique beers, again Colorado and California top the list. Following is the visualization comparing the per capita consumption rate of beer in thousands of gallons by the number of unique beers produced by state. The resulting quantity provides us a measure of producing states and consuming states. 
 
-The darker states are producing beers for their consumers and represent an opportunity for acquistiion of local beers to enter the local production scene. 
+The darker states are producing beers for their consumers and represent an opportunity for acquisition of local beers to enter the local production scene. 
 
 The lighter states in comparison are states with few locally produced beers but may have decent consumption rates. Here Budweiser may have a lower competition market opportunity. 
 
@@ -437,4 +435,8 @@ plot_usmap(data = ComparedData, values = "Producers", color= "white") +
 
 
 
+##Conclusion
 
+Overall we show there is an interesting relationship between ABV and IBU that can be used to categorize some styles of beer.
+
+There is business opportunity in identifying states with small amounts of beer produced but high consumption as lower competition states where market share may be gained at a low cost. Alternatively  states with a high production are potential states to seek acquisitions in if Budweiser is looking to widen it's portfolio of smaller local beers. 

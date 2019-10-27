@@ -6,6 +6,8 @@ In this case study we examine a list of Beers and Breweries in the United States
 
 The .rmd file in this repository is where all the code is housed, it is used to write the entire html knit file. It references the three data files (Beers, Brewereies, BeerConsumption) as local files. 
 
+The final Powerpoint is included in this repository.
+
 Youtube presentation available here: https://www.youtube.com/watch?v=yJbnk25RiRQ
 
 Codebook
